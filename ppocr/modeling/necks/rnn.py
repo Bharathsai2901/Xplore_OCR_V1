@@ -28,6 +28,9 @@ from ppocr.modeling.backbones.rec_svtrnet import (
     ones_,
 )
 
+from config_manager import get_pbs_debug
+pbs_debug = get_pbs_debug()
+
 
 class Im2Seq(nn.Layer):
     def __init__(self, in_channels, **kwargs):
@@ -35,10 +38,14 @@ class Im2Seq(nn.Layer):
         self.out_channels = in_channels
 
     def forward(self, x):
+        if pbs_debug:
+            print(f'HI bro from Im2Seq, before {x.shape}')
         B, C, H, W = x.shape
         assert H == 1
         x = x.squeeze(axis=2)
         x = x.transpose([0, 2, 1])  # (NTC)(batch, width, channels)
+        if pbs_debug:
+            print(f"HI bro from IM2Seq, after reshaping, {x.shape}")
         return x
 
 
@@ -51,6 +58,8 @@ class EncoderWithRNN(nn.Layer):
         )
 
     def forward(self, x):
+        if pbs_debug:
+            print('HI bro from EncoderWithRNN')
         x, _ = self.lstm(x)
         return x
 
@@ -83,6 +92,8 @@ class BidirectionalLSTM(nn.Layer):
             self.linear = nn.Linear(hidden_size * 2, output_size)
 
     def forward(self, input_feature):
+        if pbs_debug:
+            print('HI bro from BidirectionalLSTM')
         recurrent, _ = self.rnn(
             input_feature
         )  # batch_size x T x input_size -> batch_size x T x (2*hidden_size)
@@ -113,6 +124,8 @@ class EncoderWithCascadeRNN(nn.Layer):
         )
 
     def forward(self, x):
+        if pbs_debug:
+            print('HI bro from EncoderWithCascadeRNN')
         for i, l in enumerate(self.encoder):
             x = l(x)
         return x
@@ -132,6 +145,8 @@ class EncoderWithFC(nn.Layer):
         )
 
     def forward(self, x):
+        if pbs_debug:
+            print('HI bro from EncoderWithFC')
         x = self.fc(x)
         return x
 
@@ -235,6 +250,8 @@ class EncoderWithSVTR(nn.Layer):
         z = self.conv3(z)
         z = paddle.concat((h, z), axis=1)
         z = self.conv1x1(self.conv4(z))
+        if pbs_debug:
+            print(f'HI bro from EncoderWithSVTR, {z.shape}')
         return z
 
 
@@ -273,6 +290,9 @@ class SequenceEncoder(nn.Layer):
             self.only_reshape = False
 
     def forward(self, x):
+        if pbs_debug:
+            print('HI bro from sequenceENcoder')
+            print(f'Printing from neck bro before encoding, {x.shape}')
         if self.encoder_type != "svtr":
             x = self.encoder_reshape(x)
             if not self.only_reshape:
@@ -281,4 +301,6 @@ class SequenceEncoder(nn.Layer):
         else:
             x = self.encoder(x)
             x = self.encoder_reshape(x)
+            if pbs_debug:
+                print(f'Printing from seq encoder bro after encoder_reshape,{x.shape}')
             return x

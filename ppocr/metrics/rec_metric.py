@@ -37,6 +37,9 @@ class RecMetric(object):
 
     def __call__(self, pred_label, *args, **kwargs):
         preds, labels = pred_label
+        with open('license_plates.txt', 'a') as f:
+            for (pred, pred_conf), (target, _) in zip(preds, labels):
+                f.write(f'{pred} {target}\n')
         correct_num = 0
         all_num = 0
         norm_edit_dis = 0.0

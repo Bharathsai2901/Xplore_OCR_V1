@@ -104,7 +104,8 @@ def build_post_process(config, global_config=None):
         support_dict.append("PSEPostProcess")
 
     config = copy.deepcopy(config)
-    module_name = config.pop("name")
+    module_name = config.pop("name")   #Modue name (CTCLabelDecode) will be extracted here.
+    # print(f'Module name from init py : {module_name},{global_config}')
     if module_name == "None":
         return
     if global_config is not None:
@@ -113,4 +114,5 @@ def build_post_process(config, global_config=None):
         "post process only support {}".format(support_dict)
     )
     module_class = eval(module_name)(**config)
+    # print(f'MOdule class from init , {eval(module_name),{**config}}')
     return module_class

@@ -32,3 +32,6 @@ paddleocr.egg-info/
 /deploy/android_demo/app/cache/
 test_tipc/web/models/
 test_tipc/web/node_modules/
+pretrain_models/en_PP-OCRv3_rec_train/best_accuracy.pdparams
+pretrain_models/en_PP-OCRv3_rec_train/best_accuracy.pdopt
+pretrain_models/en_PP-OCRv3_rec_train/best_accuracy.state

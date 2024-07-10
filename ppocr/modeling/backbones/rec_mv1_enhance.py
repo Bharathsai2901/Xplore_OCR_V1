@@ -29,7 +29,8 @@ from paddle.nn import AdaptiveAvgPool2D, MaxPool2D, AvgPool2D
 from paddle.nn.initializer import KaimingNormal
 from paddle.regularizer import L2Decay
 from paddle.nn.functional import hardswish, hardsigmoid
-
+from config_manager import get_pbs_debug
+pbs_debug = get_pbs_debug()
 
 class ConvBNLayer(nn.Layer):
     def __init__(
@@ -123,6 +124,8 @@ class MobileNetV1Enhance(nn.Layer):
         super().__init__()
         self.scale = scale
         self.block_list = []
+        if pbs_debug:
+            print(f'Hello bro, I am from mobilenetV1ENHANCE. Please get printed')
 
         self.conv1 = ConvBNLayer(
             num_channels=3,
@@ -245,9 +248,14 @@ class MobileNetV1Enhance(nn.Layer):
         self.out_channels = int(1024 * scale)
 
     def forward(self, inputs):
+        if pbs_debug:
+            print(f'Prinitng from before going to backbone bro, {inputs.shape}')
         y = self.conv1(inputs)
         y = self.block_list(y)
         y = self.pool(y)
+        if pbs_debug:
+            print(f'MV1_Enhance(BACKBONE) work done. forwarding bro')
+            print(f'Prinitng after coming from backbone bro , {y.shape}')
         return y
 
 

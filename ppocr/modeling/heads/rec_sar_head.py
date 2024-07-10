@@ -26,6 +26,8 @@ import paddle
 from paddle import ParamAttr
 import paddle.nn as nn
 import paddle.nn.functional as F
+from config_manager import get_pbs_debug
+pbs_debug = get_pbs_debug()
 
 
 class SAREncoder(nn.Layer):
@@ -85,6 +87,8 @@ class SAREncoder(nn.Layer):
         self.linear = nn.Linear(encoder_rnn_out_size, encoder_rnn_out_size)
 
     def forward(self, feat, img_metas=None):
+        if pbs_debug:
+            print(f'HI bro from SAR encoder')
         if img_metas is not None:
             assert len(img_metas[0]) == feat.shape[0]
 
@@ -127,7 +131,8 @@ class BaseDecoder(nn.Layer):
 
     def forward(self, feat, out_enc, label=None, img_metas=None, train_mode=True):
         self.train_mode = train_mode
-
+        if pbs_debug:
+            print(f' HI bro from BaseDecoder')
         if train_mode:
             return self.forward_train(feat, out_enc, label, img_metas)
         return self.forward_test(feat, out_enc, img_metas)
@@ -364,7 +369,8 @@ class SARHead(nn.Layer):
         **kwargs,
     ):
         super(SARHead, self).__init__()
-
+        if pbs_debug:
+            print(f'HI bro from SARHEAD')
         # encoder module
         self.encoder = SAREncoder(
             enc_bi_rnn=enc_bi_rnn,
@@ -393,8 +399,9 @@ class SARHead(nn.Layer):
         """
         img_metas: [label, valid_ratio]
         """
+        if pbs_debug:
+            print(f'Printing from SAR Head bro')
         holistic_feat = self.encoder(feat, targets)  # bsz c
-
         if self.training:
             label = targets[0]  # label
             final_out = self.decoder(feat, holistic_feat, label, img_metas=targets)
@@ -403,5 +410,6 @@ class SARHead(nn.Layer):
                 feat, holistic_feat, label=None, img_metas=targets, train_mode=False
             )
             # (bsz, seq_len, num_classes)
-
+        if pbs_debug:
+            print(f'printing from SAR HEAD COMPLETION Bro, {final_out.shape}')
         return final_out

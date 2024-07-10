@@ -48,6 +48,7 @@ class TextRecognizer(object):
             "character_dict_path": args.rec_char_dict_path,
             "use_space_char": args.use_space_char,
         }
+        # print(f'Algorithm for Rec is {self.rec_algorithm}')
         if self.rec_algorithm == "SRN":
             postprocess_params = {
                 "name": "SRNLabelDecode",
@@ -451,6 +452,7 @@ class TextRecognizer(object):
         return img
 
     def __call__(self, img_list):
+        # print(f'HI bro, I am from call')
         img_num = len(img_list)
         # Calculate the aspect ratio of all text bars
         width_list = []
@@ -553,6 +555,7 @@ class TextRecognizer(object):
                     norm_img_mask_batch.append(norm_image_mask)
                     word_label_list.append(word_label)
                 else:
+                    # print(f'I am from predict_rec {self.rec_algorithm}')
                     norm_img = self.resize_norm_img(
                         img_list[indices[ino]], max_wh_ratio
                     )
@@ -667,6 +670,7 @@ class TextRecognizer(object):
                         self.autolog.times.stamp()
                     preds = outputs
             else:
+                # print(f'I am from predict_rec and algo passing from here {self.predictor}')
                 if self.use_onnx:
                     input_dict = {}
                     input_dict[self.input_tensor.name] = norm_img_batch
@@ -674,7 +678,9 @@ class TextRecognizer(object):
                     preds = outputs[0]
                 else:
                     self.input_tensor.copy_from_cpu(norm_img_batch)
+                    # print(f'Before predictor running')
                     self.predictor.run()
+                    # print(f'Predictor ran {self.output_tensors}')
                     outputs = []
                     for output_tensor in self.output_tensors:
                         output = output_tensor.copy_to_cpu()
@@ -698,6 +704,9 @@ class TextRecognizer(object):
                 rec_res[indices[beg_img_no + rno]] = rec_result[rno]
             if self.benchmark:
                 self.autolog.times.end(stamp=True)
+        elapsed = time.time() - st
+        # logger.debug("rec_res num  : {}, elapsed : {}".format(len(rec_res), elapsed))
+        print(f'Time elapsed from predict_rec = {elapsed:.2f}seconds')
         return rec_res, time.time() - st
 
 
@@ -717,10 +726,10 @@ def main(args):
     # create text recognizer
     text_recognizer = TextRecognizer(args)
 
-    logger.info(
-        "In PP-OCRv3, rec_image_shape parameter defaults to '3, 48, 320', "
-        "if you are using recognition model with PP-OCRv2 or an older version, please set --rec_image_shape='3,32,320"
-    )
+    # logger.info(
+    #     "In PP-OCRv3, rec_image_shape parameter defaults to '3, 48, 320', "
+    #     "if you are using recognition model with PP-OCRv2 or an older version, please set --rec_image_shape='3,32,320"
+    # )
 
     # warmup 2 times
     if args.warmup:
@@ -744,10 +753,15 @@ def main(args):
         logger.info(traceback.format_exc())
         logger.info(E)
         exit()
-    for ino in range(len(img_list)):
-        logger.info(
-            "Predicts of {}:{}".format(valid_image_file_list[ino], rec_res[ino])
-        )
+    with open('license_plates.txt', 'a') as f:
+        # print(f'IMage list len : {len(img_list)}\n')
+        for ino in range(len(img_list)):
+            # logger.info(
+            #     "Predicts of {}:{}".format(valid_image_file_list[ino], rec_res[ino])
+            # )
+            f.write(f'{valid_image_file_list[ino]}\t{rec_res[ino][0]}\n')
+        # f.write(f"{rec_res[ino][0]}\n")
+        # print(rec_res[ino])
     if args.benchmark:
         text_recognizer.autolog.report()
 

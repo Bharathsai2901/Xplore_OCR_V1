@@ -35,6 +35,9 @@ from .rec_ctc_head import CTCHead
 from .rec_sar_head import SARHead
 from .rec_nrtr_head import Transformer
 
+from config_manager import get_pbs_debug
+pbs_debug = get_pbs_debug()
+
 
 class FCTranspose(nn.Layer):
     def __init__(self, in_channels, out_channels, only_transpose=False):
@@ -67,7 +70,10 @@ class AddPos(nn.Layer):
 class MultiHead(nn.Layer):
     def __init__(self, in_channels, out_channels_list, **kwargs):
         super().__init__()
+        if pbs_debug:
+            print(f'Hi bro from MULTI-HEAD class')
         self.head_list = kwargs.pop("head_list")
+        # print(f'Head list printing from multi head class bro , {self.head_list}')
         self.use_pool = kwargs.get("use_pool", False)
         self.use_pos = kwargs.get("use_pos", False)
         self.in_channels = in_channels
@@ -78,6 +84,8 @@ class MultiHead(nn.Layer):
         for idx, head_name in enumerate(self.head_list):
             name = list(head_name)[0]
             if name == "SARHead":
+                if pbs_debug:
+                    print(f'SAR Head you got caught, entering !!')
                 # sar head
                 sar_args = self.head_list[idx][name]
                 self.sar_head = eval(name)(
@@ -85,6 +93,8 @@ class MultiHead(nn.Layer):
                     out_channels=out_channels_list["SARLabelDecode"],
                     **sar_args,
                 )
+                if pbs_debug:
+                    print(f'from multi head class, SARHEAD, {in_channels},{out_channels_list["SARLabelDecode"]}')
             elif name == "NRTRHead":
                 gtc_args = self.head_list[idx][name]
                 max_text_length = gtc_args.get("max_text_length", 25)
@@ -126,6 +136,8 @@ class MultiHead(nn.Layer):
                     out_channels=out_channels_list["CTCLabelDecode"],
                     **head_args,
                 )
+                if pbs_debug:
+                    print(f'From multihead class, {self.ctc_encoder.out_channels},{out_channels_list["CTCLabelDecode"]}')
             else:
                 raise NotImplementedError(
                     "{} is not supported in MultiHead yet".format(name)

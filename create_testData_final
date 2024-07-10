@@ -1,0 +1,70 @@
+import os
+import shutil
+import json
+
+def create_test_set(image_dir, label_dir, output_dir):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    test_dir = os.path.join(output_dir, 'test_Bench')
+    os.makedirs(test_dir, exist_ok=True)
+    
+    text_path = os.path.join(test_dir, 'Data.txt')
+    error_log_path = os.path.join(test_dir, 'error_log.txt')
+    license_plate_map_path = os.path.join(test_dir, 'license_plate_map.json')
+    
+    # Dictionary to store license plate number for each image filename
+    license_plate_map = {}
+
+    with open(text_path, 'w') as data_file, open(error_log_path, 'w') as error_log_file:
+        count = 0
+        
+        for image_filename in os.listdir(image_dir):
+            if image_filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+                image_path = os.path.join(image_dir, image_filename)
+
+                label_path = os.path.join(label_dir, os.path.splitext(image_filename)[0] + '.txt')
+                
+                if os.path.isfile(image_path) and os.path.isfile(label_path):
+                    try:
+                        # Read label from text file
+                        with open(label_path, 'r') as label_file:
+                            label = label_file.read().strip()
+                        
+                        # Map image filename to license plate number
+                        license_plate_map[image_filename] = label
+                        # print(f'{license_plate_map[image_filename]}')
+                        
+                        data_file.write(f"{image_filename}\t{label}\n")
+                        
+                        count += 1
+                        if count % 1000 == 0:
+                            print(f"Processed {count} images")
+                    
+                    except Exception as e:
+                        error_log_file.write(f"Failed to process {image_filename}: {e}\n")
+                
+                else:
+                    error_log_file.write(f"Missing file: {image_filename}\n")
+    
+    # Save license plate map to JSON file
+    with open(license_plate_map_path, 'w') as f:
+        json.dump(license_plate_map, f, indent=4)
+    
+    print(f"Total images processed: {count}")
+    print(f"License plate map saved to {license_plate_map_path}")
+
+if __name__ == "__main__":
+    image_dir = '/nfs/nas2VehiScan/IMPData/bharatp/Test_dump/images'
+    label_dir = '/nfs/nas2VehiScan/IMPData/bharatp/Test_dump/labels'
+    output_dir = '/nfs/nas2VehiScan/IMPData/bharatp/PaddleOCR/test_data'  
+    
+    create_test_set(image_dir, label_dir, output_dir)
+
+
+
+
+# Construct label filename from image filename
+# base_name = image_filename.rsplit('_lp', 1)[0]
+# label_filename = f"{base_name}.txt"
+# label_path = os.path.join(label_dir, label_filename)

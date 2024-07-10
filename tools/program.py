@@ -26,8 +26,10 @@ import paddle
 import paddle.distributed as dist
 from tqdm import tqdm
 import cv2
+import re
 import numpy as np
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
+import matplotlib.pyplot as plt
 
 from ppocr.utils.stats import TrainingStats
 from ppocr.utils.save_load import save_model
@@ -173,6 +175,50 @@ def to_float32(preds):
     elif isinstance(preds, paddle.Tensor):
         preds = preds.astype(paddle.float32)
     return preds
+    
+
+def plot_metrics(global_step_list, acc_list, ctc_loss_list, sar_loss_list, total_loss_list, val_acc_list,val_global_step_list):
+    output_dir = './output/plots'
+    os.makedirs(output_dir, exist_ok=True)  # Create directory if it doesn't exist
+
+    plt.figure(figsize=(12, 8))
+
+    plt.subplot(2, 2, 1)
+    plt.plot(global_step_list, acc_list, label='Training Accuracy', color='blue')
+    plt.plot(val_global_step_list, val_acc_list, label='Validation Accuracy', color='red')
+    plt.xlabel('Global_step')
+    plt.ylabel('Accuracy')
+    plt.title('Accuracy per Global_step')
+    plt.legend()
+    plt.savefig(os.path.join(output_dir, 'accuracy_per_global_step.png'))  # Save plot
+
+    plt.subplot(2, 2, 2)
+    plt.plot(global_step_list, ctc_loss_list, label='CTC Loss', color='red')
+    plt.xlabel('Global_step')
+    plt.ylabel('CTC Loss')
+    plt.title('CTC Loss per Global_step')
+    plt.legend()
+    plt.savefig(os.path.join(output_dir, 'ctc_loss_per_global_step.png'))  # Save plot
+
+    plt.subplot(2, 2, 3)
+    plt.plot(global_step_list, sar_loss_list, label='SAR Loss', color='green')
+    plt.xlabel('Global_step')
+    plt.ylabel('SAR Loss')
+    plt.title('SAR Loss per Global_step')
+    plt.legend()
+    plt.savefig(os.path.join(output_dir, 'sar_loss_per_global_step.png'))  # Save plot
+
+    plt.subplot(2, 2, 4)
+    plt.plot(global_step_list, total_loss_list, label='Total Loss', color='orange')
+    plt.xlabel('Global_step')
+    plt.ylabel('Total Loss')
+    plt.title('Total Loss per Global_step')
+    plt.legend()
+    plt.savefig(os.path.join(output_dir, 'total_loss_per_global_step.png'))  # Save plot
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'metrics_per_global_step.png'))  # Save combined plot
+    # plt.show()
 
 
 def train(
@@ -290,6 +336,14 @@ def train(
         else len(train_dataloader)
     )
 
+    global_step_list = []
+    acc_list = []
+    ctc_loss_list = []
+    sar_loss_list = []
+    total_loss_list = []
+    val_acc_list = []
+    val_global_step_list = []
+
     for epoch in range(start_epoch, epoch_num + 1):
         if train_dataloader.dataset.need_reset:
             train_dataloader = build_dataloader(
@@ -300,6 +354,7 @@ def train(
                 if platform.system() == "Windows"
                 else len(train_dataloader)
             )
+
 
         for idx, batch in enumerate(train_dataloader):
             profiler.add_profiler_step(profiler_options)
@@ -403,6 +458,13 @@ def train(
                 or (idx >= len(train_dataloader) - 1)
             ):
                 logs = train_stats.log()
+                logs_dict = train_stats.get()
+
+                acc_list.append(logs_dict["acc"])
+                ctc_loss_list.append(logs_dict["CTCLoss"])
+                sar_loss_list.append(logs_dict["SARLoss"])
+                total_loss_list.append(logs_dict["loss"])
+                global_step_list.append(global_step)
 
                 eta_sec = (
                     (epoch_num + 1 - epoch) * len(train_dataloader) - idx - 1
@@ -493,7 +555,11 @@ def train(
                         ["{}: {}".format(k, v) for k, v in best_model_dict.items()]
                     )
                 )
-                logger.info(best_str)
+                # print(f'validation metrics raw,{best_model_dict.items()}')
+                for key, value in best_model_dict.items():
+                    if key == 'acc':
+                        val_acc_list.append(value)
+                val_global_step_list.append(global_step)
                 # logger best metric
                 if log_writer is not None:
                     log_writer.log_metrics(
@@ -511,6 +577,7 @@ def train(
                     )
 
             reader_start = time.time()
+
         if dist.get_rank() == 0:
             save_model(
                 model,
@@ -545,7 +612,7 @@ def train(
                 log_writer.log_model(
                     is_best=False, prefix="iter_epoch_{}".format(epoch)
                 )
-
+    plot_metrics(global_step_list, acc_list, ctc_loss_list, sar_loss_list, total_loss_list, val_acc_list, val_global_step_list)
     best_str = "best metric, {}".format(
         ", ".join(["{}: {}".format(k, v) for k, v in best_model_dict.items()])
     )
@@ -585,6 +652,8 @@ def eval(
             if idx >= max_iter:
                 break
             images = batch[0]
+            # with open('license_plates.txt', 'a') as f:
+            #     f.write(f"{batch[0].shape}\n")
             start = time.time()
 
             # use amp
@@ -620,6 +689,8 @@ def eval(
                     lr_img = preds["lr_img"]
                 else:
                     preds = model(images)
+                # with open('license_plates.txt', 'w') as f:
+                #     f.write(f"{preds}\n")
 
             batch_numpy = []
             for item in batch:
@@ -642,6 +713,8 @@ def eval(
                 eval_class(preds[0], batch_numpy[2:], epoch_reset=(idx == 0))
             else:
                 post_result = post_process_class(preds, batch_numpy[1])
+                # with open('license_plates.txt', 'a') as f:
+                #     f.write(f"{batch_numpy}\n")
                 eval_class(post_result, batch_numpy)
 
             pbar.update(1)

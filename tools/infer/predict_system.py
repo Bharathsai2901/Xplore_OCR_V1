@@ -91,7 +91,7 @@ class TextSystem(object):
             elapsed = []
             dt_slice_boxes = []
             for slice_crop, v_start, h_start in slice_gen:
-                dt_boxes, elapse = self.text_detector(slice_crop, use_slice=True)
+                dt_boxes, elapse = self.text_detector(slice_crop)
                 if dt_boxes.size:
                     dt_boxes[:, :, 0] += h_start
                     dt_boxes[:, :, 1] += v_start
@@ -140,7 +140,7 @@ class TextSystem(object):
             logger.debug(
                 f"rec crops num: {len(img_crop_list)}, time and memory cost may be large."
             )
-
+        # print(f'{img_crop_list}')
         rec_res, elapse = self.text_recognizer(img_crop_list)
         time_dict["rec"] = elapse
         logger.debug("rec_res num  : {}, elapsed : {}".format(len(rec_res), elapse))

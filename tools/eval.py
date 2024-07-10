@@ -30,6 +30,7 @@ from ppocr.postprocess import build_post_process
 from ppocr.metrics import build_metric
 from ppocr.utils.save_load import load_model
 import tools.program as program
+from config_manager import set_global_config, get_global_config
 
 
 def main():
@@ -164,4 +165,5 @@ def main():
 
 if __name__ == "__main__":
     config, device, logger, vdl_writer = program.preprocess()
+    set_global_config(config)
     main()

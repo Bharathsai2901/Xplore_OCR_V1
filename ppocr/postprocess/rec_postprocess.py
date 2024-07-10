@@ -17,6 +17,8 @@ import paddle
 from paddle.nn import functional as F
 import re
 
+from config_manager import get_pbs_debug
+pbs_debug = get_pbs_debug()
 
 class BaseRecLabelDecode(object):
     """Convert between text-label and text-index"""
@@ -26,7 +28,8 @@ class BaseRecLabelDecode(object):
         self.end_str = "eos"
         self.reverse = False
         self.character_str = []
-
+        if pbs_debug:
+            print(f'Hi bro from BaseREcLabelDEcode')
         if character_dict_path is None:
             self.character_str = "0123456789abcdefghijklmnopqrstuvwxyz"
             dict_character = list(self.character_str)
@@ -162,6 +165,7 @@ class BaseRecLabelDecode(object):
                 conf_list = [0]
 
             text = "".join(char_list)
+            # print(f'Text : {text}, conf_list " {conf_list}')
 
             if self.reverse:  # for arabic rec
                 text = self.pred_reverse(text)
@@ -197,12 +201,16 @@ class CTCLabelDecode(BaseRecLabelDecode):
         super(CTCLabelDecode, self).__init__(character_dict_path, use_space_char)
 
     def __call__(self, preds, label=None, return_word_box=False, *args, **kwargs):
+        if pbs_debug:
+            print(f'Printing after entering ctc decode bro, {preds.shape}')
         if isinstance(preds, tuple) or isinstance(preds, list):
             preds = preds[-1]
         if isinstance(preds, paddle.Tensor):
             preds = preds.numpy()
         preds_idx = preds.argmax(axis=2)
         preds_prob = preds.max(axis=2)
+        if pbs_debug:
+            print(f'pred_idx: {preds_idx.shape, preds_idx}\npred_prob, {preds_prob.shape,preds_prob}\n')
         text = self.decode(
             preds_idx,
             preds_prob,
@@ -217,6 +225,8 @@ class CTCLabelDecode(BaseRecLabelDecode):
         if label is None:
             return text
         label = self.decode(label)
+        if pbs_debug:
+            print(f'Prinitng afeter completing ctc label decode,label :{label},text :{text}')
         return text, label
 
     def add_special_char(self, dict_character):
@@ -678,7 +688,7 @@ class SARLabelDecode(BaseRecLabelDecode):
 
     def __init__(self, character_dict_path=None, use_space_char=False, **kwargs):
         super(SARLabelDecode, self).__init__(character_dict_path, use_space_char)
-
+        print(f'SAR LABEL DECODE, you got caught.')
         self.rm_symbol = kwargs.get("rm_symbol", False)
 
     def add_special_char(self, dict_character):
@@ -732,6 +742,9 @@ class SARLabelDecode(BaseRecLabelDecode):
         return result_list
 
     def __call__(self, preds, label=None, *args, **kwargs):
+        print(f'Calling SAR Decode bro')
+        if isinstance(preds, tuple) or isinstance(preds, list):
+            preds = preds[-1]
         if isinstance(preds, paddle.Tensor):
             preds = preds.numpy()
         preds_idx = preds.argmax(axis=2)

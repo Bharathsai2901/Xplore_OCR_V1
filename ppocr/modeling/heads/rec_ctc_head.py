@@ -21,6 +21,8 @@ import math
 import paddle
 from paddle import ParamAttr, nn
 from paddle.nn import functional as F
+from config_manager import get_pbs_debug
+pbs_debug = get_pbs_debug()
 
 
 def get_para_bias_attr(l2_decay, k):
@@ -43,6 +45,8 @@ class CTCHead(nn.Layer):
         **kwargs,
     ):
         super(CTCHead, self).__init__()
+        if pbs_debug:
+            print(f'HI bro from CTC head')
         if mid_channels is None:
             weight_attr, bias_attr = get_para_bias_attr(
                 l2_decay=fc_decay, k=in_channels
@@ -75,6 +79,8 @@ class CTCHead(nn.Layer):
         self.return_feats = return_feats
 
     def forward(self, x, targets=None):
+        if pbs_debug:
+            print(f'Printing after entering CTC head bro, {x.shape}')
         if self.mid_channels is None:
             predicts = self.fc(x)
         else:
@@ -88,5 +94,7 @@ class CTCHead(nn.Layer):
         if not self.training:
             predicts = F.softmax(predicts, axis=2)
             result = predicts
-
+        # print('Hello from PBS')
+        if pbs_debug:
+            print(f'Printing after completing CTCHEAD bro,{result.shape}')
         return result
